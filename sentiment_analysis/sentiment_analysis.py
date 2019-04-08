@@ -25,27 +25,6 @@ import tensorflow as tf
 from collections import Counter
 import tqdm
 
-get_ipython().magic('matplotlib inline')
-
-
-# In[2]:
-
-
-tf.__version__
-
-
-# # 数据处理
-
-# ## 数据加载
-
-# In[3]:
-
-
-os.listdir("./data")
-
-
-# In[4]:
-
 
 # 加载正负评论数据
 # pos数据
@@ -55,12 +34,6 @@ with open("data/pos.txt", "r") as f:
 # neg数据
 with open("data/neg.txt", "r") as f:
     neg_text = f.read()
-
-
-# ## 描述性统计
-
-# In[5]:
-
 
 # 积极文本统计
 print("-" * 20 + " POSITIVE TEXT " + "-" * 20)
@@ -88,15 +61,6 @@ c = Counter(neg_text.split()).most_common(100)
 print("Most common words in negative sentences: \n{}".format(c))
 
 
-# ## 数据预处理
-# 
-# - 构造词典Vocabulary
-# - 构造映射表
-# - 转换单词为tokens
-
-# In[6]:
-
-
 # 句子最大长度
 SENTENCE_LIMIT_SIZE = 20
 
@@ -105,24 +69,14 @@ SENTENCE_LIMIT_SIZE = 20
 # 
 # 我们要基于整个语料来构造我们的词典，由于文本中包含许多干扰词汇，例如仅出现过1次的这类单词。对于这类极其低频词汇，我们可以对其进行去除，一方面能加快模型执行效率，一方面也能减少特殊词带来的噪声。
 
-# In[7]:
-
-
 # 合并pos和neg文本
 total_text = pos_text + "\n" + neg_text
 # 统计词汇
 c = Counter(total_text.split())
 
 
-# In[8]:
-
-
 # 倒序查看词频
 sorted(c.most_common(), key=lambda x: x[1])
-
-
-# In[9]:
-
 
 # 初始化两个token：pad和unk
 vocab = ["<pad>", "<unk>"]
@@ -132,28 +86,13 @@ for w, f in c.most_common():
     if f > 1:
         vocab.append(w)
 
-
-# In[10]:
-
-
 print("The total size of our vocabulary is: {}".format(len(vocab)))
-
-
-# ### 构造映射
-
-# In[11]:
 
 
 # 单词到编码的映射，例如machine -> 10283
 word_to_token = {word: token for token, word in enumerate(vocab)}
 # 编码到单词的映射，例如10283 -> machine
 token_to_word = {token: word for word, token in word_to_token.items()}
-
-
-# ### 转换文本
-
-# In[12]:
-
 
 def convert_text_to_token(sentence, word_to_token_map=word_to_token, limit_size=SENTENCE_LIMIT_SIZE):
     """
@@ -181,19 +120,12 @@ def convert_text_to_token(sentence, word_to_token_map=word_to_token, limit_size=
     
     return tokens
 
-
-# In[13]:
-
-
 # 对pos文本处理
 pos_tokens = []
 
 for sentence in tqdm.tqdm(pos_sentences):
     tokens = convert_text_to_token(sentence)
     pos_tokens.append(tokens)
-
-
-# In[14]:
 
 
 # 对neg文本处理
@@ -204,28 +136,15 @@ for sentence in tqdm.tqdm(neg_sentences):
     neg_tokens.append(tokens)
 
 
-# In[15]:
-
-
 # 转化为numpy格式，方便处理
 pos_tokens = np.array(pos_tokens)
 neg_tokens = np.array(neg_tokens)
-
-
-# In[16]:
-
 
 # 合并所有语料
 total_tokens = np.concatenate((pos_tokens, neg_tokens), axis=0)
 
 
-# In[17]:
-
-
 print("The shape of all tokens in our corpus: ({}, {})".format(*total_tokens.shape))
-
-
-# In[18]:
 
 
 # 转化为numpy格式，方便处理
@@ -233,15 +152,8 @@ pos_targets = np.ones((pos_tokens.shape[0]))
 neg_targets = np.zeros((neg_tokens.shape[0]))
 
 
-# In[19]:
-
-
 # 合并所有target
 total_targets = np.concatenate((pos_targets, neg_targets), axis=0).reshape(-1, 1)
-
-
-# In[20]:
-
 
 print("The shape of all targets in our corpus: ({}, {})".format(*total_targets.shape))
 
@@ -254,8 +166,6 @@ print("The shape of all targets in our corpus: ({}, {})".format(*total_targets.s
 # - 如果当前词为< PAD >，则用0向量代替
 
 # ### 加载glove预训练词向量
-
-# In[21]:
 
 
 # 加载预训练好的glove词向量
@@ -354,10 +264,8 @@ x_train, x_test, y_train, y_test = split_train_test(total_tokens, total_targets)
 
 # ### get_batch函数
 
-# In[29]:
 
-
-def get_batch(x, y, batch_size=BATCH_SIZE, shuffle=True):
+def get_batch(x, y, batch_size=256, shuffle=True):
     assert x.shape[0] == y.shape[0], print("error shape!")
     # shuffle
     if shuffle:
@@ -378,29 +286,14 @@ def get_batch(x, y, batch_size=BATCH_SIZE, shuffle=True):
 
 # # DNN模型
 
-# ## 构建模型图
-# 
-# <img src="images/dnn.png" style="width:500;height:500px;">
-
-# In[30]:
-
-
 # 清空图
 tf.reset_default_graph()
 
-
-# In[31]:
-
-
 # 定义神经网络超参数
 HIDDEN_SIZE = 512
-LEARNING_RATE = 0.001
-EPOCHES = 50
-BATCH_SIZE = 256
-
-
-# In[32]:
-
+LEARNING_RATE = 0.001          #学习率
+EPOCHES = 50                   #训练的次数
+BATCH_SIZE = 256               #一批的个数
 
 with tf.name_scope("dnn"):
     # 输入及输出tensor
@@ -449,33 +342,19 @@ with tf.name_scope("dnn"):
 
 # ## 训练模型
 
-# In[33]:
-
-
 # 存储准确率
 dnn_train_accuracy = []
 dnn_test_accuracy = []
 
-
-# In[34]:
-
-
 saver = tf.train.Saver()
-
-
-# In[35]:
-
-
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     
     writer = tf.summary.FileWriter("./graphs/dnn", tf.get_default_graph())
     
-    n_batches = int(x_train.shape[0] / BATCH_SIZE)
-    
+    n_batches = int(x_train.shape[0] / BATCH_SIZE)              #一共批的个数
     for epoch in range(EPOCHES):
         total_loss = 0
-        
         for x_batch, y_batch in get_batch(x_train, y_train):
             _, batch_loss = sess.run([optimizer, loss],
                                      feed_dict={inputs: x_batch, targets: y_batch})
@@ -492,34 +371,23 @@ with tf.Session() as sess:
         test_acc = test_corrects / x_test.shape[0]
         dnn_test_accuracy.append(test_acc)
         
-        print("Epoch: {}, Train loss: {:.4f}, Train accuracy: {:.4f}, Test accuracy: {:.4f}".format(epoch + 1, 
+        print("Epoch: {}, total_loss Train : {:.4f}, Train accuracy: {:.4f}, Test accuracy: {:.4f}".format(epoch + 1,
                                                                                                     total_loss/n_batches,
                                                                                                     train_acc,
                                                                                                     test_acc))
     # 存储模型
     saver.save(sess, "./checkpoints/dnn")
     writer.close()
-
-
-# In[47]:
-
-
 plt.plot(dnn_train_accuracy)
 plt.plot(dnn_test_accuracy)
 plt.ylim(ymin=0.5, ymax=1.01)
 plt.title("The accuracy of DNN model")
 plt.legend(["train", "test"])
 
-
 # ## 预测模型
-
-# In[48]:
-
-
 # 在test上的准确率
 with tf.Session() as sess:
     saver.restore(sess, "checkpoints/dnn")
-    
     total_correct = 0
     acc = sess.run(accuracy,
                     feed_dict={inputs: x_test, 
@@ -527,10 +395,7 @@ with tf.Session() as sess:
     total_correct += acc
     print("The DNN model accuracy on test set: {:.2f}%".format(100* total_correct / x_test.shape[0]))
 
-
 # 在命令行执行tensorboard --logdir="./graphs/dnn" --port 6006可以看到模型的tensorboard
-# 
-# <img src="images/dnn-tensorboard.png" style="width:500;height:500px;">
 
 # # RNN模型
 
